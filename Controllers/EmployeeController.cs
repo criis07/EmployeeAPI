@@ -2,6 +2,7 @@ using System.Globalization;
 using EmployeeAPI.Data.Repositories;
 using EmployeeAPI.Model;
 using Microsoft.AspNetCore.Mvc;
+using MySqlX.XDevAPI.Common;
 using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace EmployeeAPI.Controllers
@@ -169,6 +170,7 @@ namespace EmployeeAPI.Controllers
         [Route("/employees/{id}")]
         public async Task<IActionResult> UpdateEmployee([FromBody] Employee employee)
         {
+            var response = new Response { };
             if (employee == null)
             {
                 return BadRequest();
@@ -177,8 +179,21 @@ namespace EmployeeAPI.Controllers
             {
                 return BadRequest(ModelState);
             }
-            await _employeeRepository.UpdateEmployee(employee);
-            return NoContent();
+            var result = await _employeeRepository.UpdateEmployee(employee);
+            if (result) { 
+            response = new Response
+            {
+                message = "updated",
+                succeeded = true
+            };
+            return StatusCode(200, response);
+            }
+            response = new Response
+            {
+                message = "Something went wrong",
+                succeeded = false
+            };
+            return StatusCode(400, response);
         }
 
         /// <summary>
@@ -190,9 +205,57 @@ namespace EmployeeAPI.Controllers
         [Route("/employees/{id}")]
         public async Task<IActionResult> DeleteEmployee(int id)
         {
-            await _employeeRepository.DeleteEmployee(id);
+            var response = new Response { };
+            var result = await _employeeRepository.DeleteEmployee(id);
+            if (result)
+            {
+                response = new Response
+                {
+                    message = "Deleted",
+                    succeeded = true
+                };
+                return StatusCode(200, response);
+            }
+            response = new Response
+            {
+                message = "Something went wrong",
+                succeeded = false
+            };
+            return StatusCode(400, response);
+        }
+        /// <summary>
+        /// Searches for employees by last name or phone number and returns all 6 values.
+        /// </summary>
+        /// <param name="query">The last name or phone number to search for.</param>
+        /// <returns>Returns a list of employees matching the search criteria.</returns>
+        [HttpGet]
+        [Route("/employees/search")]
+        public async Task<IActionResult> SearchEmployees(string param)
+        {
+            var response = new Response { };
+            if (string.IsNullOrWhiteSpace(param))
+            {
+                response = new Response
+                {
+                    message = "Param for this search is required",
+                    succeeded = false
+                };
+                return StatusCode(400, response);
+            }
 
-            return NoContent();
+            var employees = await _employeeRepository.SearchEmployees(param);
+
+            if (employees == null || !employees.Any())
+            {             
+                response = new Response
+                {
+                    message = "No employees found",
+                    succeeded = false
+                };
+                return StatusCode(400, response);
+            }
+
+            return Ok(employees);
         }
 
     }
