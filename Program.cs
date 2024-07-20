@@ -5,15 +5,24 @@ using MySql.Data.MySqlClient;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddSingleton<MysqlConfigs>(new MysqlConfigs(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Add CORS policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocalhost4200",
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:4200")
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        });
+});
 
-
+builder.Services.AddSingleton(new MysqlConfigs(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddSingleton(new MySqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddTransient<IEmployeeRepository, EmployeeRepository>();
 
@@ -25,6 +34,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Enable CORS
+app.UseCors("AllowLocalhost4200");
 
 app.UseHttpsRedirection();
 
